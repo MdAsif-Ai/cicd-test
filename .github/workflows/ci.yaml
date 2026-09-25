@@ -1,0 +1,91 @@
+name: Factorial CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  # --------------------
+  # CI: Test
+  # --------------------
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest
+
+
+  # --------------------
+  # CI: Build
+  # --------------------
+  build:
+    name: Build Package
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create build package
+        run: |
+          mkdir build
+          cp factorial.py build/
+          cp main.py build/
+          cp README.md build/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: factorial-build
+          path: build/
+
+
+  # --------------------
+  # CD: Deploy
+  # --------------------
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+
+    # Deploy only after code reaches main
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: factorial-build
+          path: build/
+
+      - name: Show build contents
+        run: |
+          echo "Deployment package:"
+          ls -la build/
+
+      - name: Deploy
+        run: |
+          echo "Deploying factorial application..."
+          # Add real deployment commands here
